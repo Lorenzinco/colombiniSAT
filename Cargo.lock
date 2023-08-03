@@ -9,7 +9,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1370e9fc2a6ae53aea8b7a5110edbd08836ed87c88736dfabccade1c2b44bff4"
 
 [[package]]
-name = "colombiniSAT"
+name = "colombini_sat"
 version = "0.1.0"
 dependencies = [
  "dimacs",
