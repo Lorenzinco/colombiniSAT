@@ -1,0 +1,8 @@
+c
+c   Test file that loads 3 clauses
+c
+p cnf 3 3
+1 2 3 0
+-1 -2 3 0
+1 -2 3 0
+0

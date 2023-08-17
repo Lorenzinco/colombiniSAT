@@ -1,18 +1,11 @@
-use std::env;
-use dimacs::parse_dimacs;
+use colombini_sat::{phi::Phi,solver::solve};
 
-pub fn main()-> Result<(), Box<dyn std::error::Error>> {
-    let args: Vec<String> = env::args().collect();
-    println!("Path given: {:?}", args);
-    let path = &args[1];
-    println!("Path given: {:?}", path);
+fn main() {
+    //solve all 5 test files
 
-    //parse the file at path
-    let sat_instance= parse_dimacs(path).unwrap();
-
-    println!("SAT instance: {:?}", sat_instance);
-    
-    Ok(())
+        let phi = Phi::from_file(&format!("TestData/solver20-0.cnf")).unwrap();
+        match solve(&phi) {
+            Some(assignments) => println!("satisfiable: {:?}", assignments),
+            None => println!("unsatisfiable")
+        }
 }
-
-
