@@ -7,13 +7,14 @@ use petgraph::{graph::{Graph, NodeIndex}, algo};
 Core idea: at each step identify the i-th literal that is forced to be true or false within their i-th phi_prime
 phi_prime_i being a subset of phi, composed by the clauses that contains the literal i.
 */
-pub fn solve_2_sat(phi: &Phi) -> Result<(), Error>
+pub fn solve_2_sat(phi: &Phi) -> Result<Vec<Option<bool>>, Error>
 {
     let mut graph = Graph::<isize,i8>::new();
     let mut added_literals = HashMap::<isize,NodeIndex>::new();
 
     //remove unit clauses
-    let rphi = phi.autoreduce();
+    let mut assignments: Vec<Option<bool>> = vec![None;phi.vars()];
+    let rphi = phi.autoreduce_with_assignments(&mut assignments);
     //check that all clauses in phi are 2-sat and
     //for each clause in phi, create a graph composed by each literal being a node 
     //and each clause impling two edges between the two literals in the clause
@@ -56,13 +57,27 @@ pub fn solve_2_sat(phi: &Phi) -> Result<(), Error>
     }
 
     //find all completely connected groups
-    let sccs = algo::tarjan_scc(&graph);
+    let mut sccs = algo::tarjan_scc(&graph);
+    sccs.reverse();
     //explore the groups and find if there is a node with a completely connected (two way) path to its negation
+    /*the groups are returned in reverse topological order so, a satisfyng assignment 
+    can be found by assigning the variables in the reverse order of the groups*/
     for scc in sccs
     {
         for node in &scc
         {
-            let index = graph[*node];
+            let index: isize = graph[*node];
+            let mut arr_index = index.abs() as usize;
+            arr_index -= 1;
+            match assignments[arr_index]{
+                Some(_) => {},
+                None => {
+                if index > 0{
+                    assignments[arr_index] = Some(true);
+                }else{
+                    assignments[arr_index] = Some(false);
+                }}
+            }
             let negation = -index;
             let negation_node = added_literals.get(&negation).copied();
             if let Some(negation_node) = negation_node
@@ -74,7 +89,9 @@ pub fn solve_2_sat(phi: &Phi) -> Result<(), Error>
             }
         }
     }
-    Ok(())
+
+    
+    Ok(assignments)
 }
 
 pub fn solve_2_sat_with_assignments(phi: &Phi) -> Result<Vec<Option<bool>>, Error>
@@ -269,17 +286,15 @@ pub fn solve(phi: &Phi) -> Option<Vec<bool>>
     let n_vars = phi.vars();
     let mut assignment: Vec<Option<bool>> = vec![None;n_vars];
     while phi.clauses.len() > 0{
-        phi = phi.autoreduce();
+        phi = phi.autoreduce_with_assignments(&mut assignment);
         //check if phi is empty
         if phi.clauses.len() > 0 && phi.clauses[0] == Clause::Empty{
             return None;
         }
         //for each variable, check if it is forced to be true or false
         let literals = phi.get_variables();
+        let mut last_forced_literal = None;
         let unrestrained = unrestrained_vector(&phi);
-        //create a vector of assignments for each literal in literals
-        let mut assignments_for_each_literal: Vec<Vec<Option<bool>>> = vec![vec![None;n_vars]; n_vars];
-        let mut last_forced_literal: Option<usize> = None;
         //for every literal in literals that isnt in the reserve list
         for literal in literals{
             if !unrestrained.contains(&literal){
@@ -288,48 +303,38 @@ pub fn solve(phi: &Phi) -> Option<Vec<bool>>
                 let phi_prime = phi.phi_prime(literal);
                 assignment[literal] = Some(true);
                 let phi_prime_true = phi_prime.reduce(&assignment);
-                let result_true = solve_2_sat_with_assignments(&phi_prime_true);
+                let result_true: Result<Vec<Option<bool>>, Error> = solve_2_sat(&phi_prime_true);
                 if result_true.is_ok(){
-                    assignments_for_each_literal[literal] = result_true.unwrap();
-                    //check if in any other assignment theres at least one literal with opposite value
+                    for (index,value) in result_true.unwrap().into_iter().enumerate(){
+                        match value{
+                            Some(_) => {
+                                assignment[index] = value;
+                            },
+                            None => {}
+                        }
+                    }
+                    phi = phi.reduce(&assignment);
+                    break;
                 }
                 assignment[literal] = Some(false);
                 let phi_prime_false = phi_prime.reduce(&assignment);
-                let result_false = solve_2_sat_with_assignments(&phi_prime_false);
+                let result_false = solve_2_sat(&phi_prime_false);
                 if result_false.is_ok(){
-                    assignments_for_each_literal[literal] = result_false.unwrap();
-                }
-                println!("Literal {literal} found the assignment {:?}", assignments_for_each_literal[literal]);
-                println!("{}",assignments_for_each_literal[literal].len());
-                for i in 0..n_vars{
-                    if i == literal{
-                        continue;
-                    }
-                    for j in 0..n_vars{
-                        match assignments_for_each_literal[i][j]{
-                            Some(_)=>{
-                                match assignments_for_each_literal[literal][j]{
-                                    Some(value)=>{
-                                        if value != assignments_for_each_literal[i][j].unwrap(){
-                                            return None;
-                                        }
-                                    }
-                                    None=>{}
-                                }
-                            }
-                            None=>{}
+                    for (index,value) in result_false.unwrap().into_iter().enumerate(){
+                        match value{
+                            Some(_) => {
+                                assignment[index] = value;
+                            },
+                            None => {}
                         }
                     }
-                }
-                //merge assignment and assignments_for_each_literal[literal]
-                for i in 0..n_vars{
-                    println!("{} {}", i, literal);
-                    if assignments_for_each_literal[literal][i].is_some(){
-                        assignment[i] = assignments_for_each_literal[literal][i];
-                    }
+                    phi = phi.reduce(&assignment);
+                    break;
                 }
             }
         }
+        println!("{:?}",assignment);
+        println!("{phi}");
 
         if last_forced_literal.is_none()
         {
@@ -365,15 +370,7 @@ pub fn unrestrained_vector(phi: &Phi) -> Vec<usize>
         let result_false = solve_2_sat(&phi_prime_false).is_ok();
         if result_true && result_false{
             reserves.push(*index);
-        } 
-        
-        /*
-        let phi_second = phi.phi_second(*index);
-        assignment[*index] = Some(true);
-        if solve_2_sat(&phi_second).is_ok(){
-            reserves.push(*index);
-        } 
-        */
+        }
     } 
     reserves
 }

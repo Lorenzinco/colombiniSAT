@@ -25,12 +25,16 @@ impl std::fmt::Display for Phi
 impl Phi{
     pub fn new() -> Phi
     {
-        Phi{clauses: Vec::new()}
+        Phi{
+            clauses: Vec::new(),
+        }
     }
 
     pub fn new_unsat() -> Phi
     {
-        Phi{clauses: vec![Clause::Empty]}
+        Phi{
+            clauses: vec![Clause::Empty],
+        }
     }
 
     pub fn vars(&self) -> usize
@@ -184,23 +188,6 @@ impl Phi{
         Phi{clauses}
     }
 
-    pub fn phi_second(&self, index: usize) -> Phi
-    {
-        //get the clauses where literal with index index is present
-        //and remove the literal from the clause
-        let mut clauses: Vec<Clause> = Vec::new();
-        for clause in &self.clauses
-        { 
-            if clause.contains(index)
-            { 
-                let new_clause = clause.clone();
-                let new_clause = new_clause.remove(index);
-                clauses.push(new_clause); 
-            } 
-        }
-        Phi{clauses}
-    }
-
     pub fn create_unit(&self) -> Vec<Clause>
     {
         let var_count = self.vars();
@@ -241,7 +228,7 @@ impl Phi{
     pub fn add_unit(&self) -> Phi
     {
         let mut new_units = self.create_unit();
-        let mut ret = Phi { clauses:  self.clauses.clone() };
+        let mut ret = Phi { clauses:  self.clauses.clone()};
         ret.clauses.append(&mut new_units);
         ret
     }
