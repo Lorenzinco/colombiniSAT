@@ -7,7 +7,7 @@ use petgraph::{graph::{Graph, NodeIndex}, algo};
 Core idea: at each step identify the i-th literal that is forced to be true or false within their i-th phi_prime
 phi_prime_i being a subset of phi, composed by the clauses that contains the literal i.
 */
-fn update_active_implications(solution: &mut Vec<bool>,problem: Vec<(isize,isize)>,active_implications: &mut Vec<(isize,isize)>){
+fn update_active_implications(solution: &mut Vec<bool>,problem: &Vec<(isize,isize)>,active_implications: &mut Vec<(isize,isize)>){
     active_implications.clear();
     for (i,xi_true) in solution.iter().enumerate(){
         if *xi_true{
@@ -61,17 +61,109 @@ fn remove_from_active_list_and_remember_predecessor(active_literals: &mut Vec<us
 
 }
 
-pub fn enumerate(solution: &mut Vec<bool>, active_literals: &mut Vec<usize>,active_implications: &mut Vec<(isize,isize)>, index: usize, depth: usize, solutions: &mut Vec<Vec<bool>>,problem: Vec<(isize,isize)>){
+pub fn create_graph(phi: &Phi)->Graph<isize,isize>{
+    let mut graph = Graph::<isize,isize>::new();
+    let mut added_literals = HashMap::<isize,NodeIndex>::new();
+
+    //remove unit clauses
+    let mut assignments: Vec<Option<bool>> = vec![None;phi.vars()];
+    let rphi = phi.autoreduce_with_assignments(&mut assignments);
+    //check that all clauses in phi are 2-sat and
+    //for each clause in phi, create a graph composed by each literal being a node 
+    //and each clause impling two edges between the two literals in the clause
+    for clause in &rphi.clauses
+    {
+        match clause
+        {
+            Clause::C3(_,_,_) => { panic!("Not a 2-sat formula")},
+            Clause::C2(l1,l2) => {
+
+                for i in 0..2
+                {
+                    let index1: isize = if i == 0 { -l1.as_isize() } else { l1.as_isize() };
+                    let index2 = if i == 0 { l2.as_isize() } else { -l2.as_isize() };
+
+                    let mut n1 = added_literals.get(&index1).copied();
+                    match n1 {
+                        None => {
+                            let node = graph.add_node(index1);
+                            n1 = Some(node);
+                            added_literals.insert(index1, node);
+                        }
+                        Some(_) => {}
+                    }
+                    let mut n2 = added_literals.get(&index2).copied();
+                    match n2 {
+                        None => {
+                            let node = graph.add_node(index2);
+                            n2 = Some(node);
+                            added_literals.insert(index2, node);
+                        }
+                        Some(_) => {}
+                    }
+                    graph.add_edge(n1.unwrap(), n2.unwrap(), 1);
+                }
+            },
+            Clause::C1(_) => { unreachable!() },
+            Clause::Empty => { panic!("Not satisfiable, empty clause given.") },
+        }
+    }
+    graph
+}
+
+pub fn enumerate(og_solution: &Vec<Option<bool>>, phi_prime: &Phi){
+    //create a new phi that has all the literals that are true in solution inverted
+    let mut added_to_graph = HashMap::<usize,NodeIndex>::new();
+    let mut solution = og_solution.clone();
+    let mut phi = phi_prime.clone();
+    let mut permutation_map = HashMap::<usize,usize>::new();
+    let mut literals = phi.get_variables();
+    literals.sort();
+
+    let graph = create_graph(&phi);
+
+    for (i,literal) in literals.iter().enumerate(){
+        permutation_map.insert(i, literal.clone());
+        match solution[*literal]{
+            Some(true) => {phi.invert_literal(i);solution[*literal]=Some(false)},
+            Some(false) => {},
+            None => {}
+        }
+    }
+
+    let mut problem = Graph::<isize,isize>::new();
+    let mut sorted: Vec<NodeIndex> = Vec::new();
+    match algo::toposort(&problem, None){
+        Ok(result) => {sorted = result;},
+        Err(_) => {panic!("Not a DAG")}
+    }
+
+    
+}
+
+pub fn _enumerate(solution: &mut Vec<bool>, active_literals: &mut Vec<usize>,active_implications: &mut Vec<(isize,isize)>, index: usize, depth: usize, solutions: &mut Vec<Vec<bool>>,problem: &Vec<(isize,isize)>){
     let i = index;
     solution[i]=true;
-    if depth % 2 == 0{solutions.push(solution.clone());}
+    if depth % 2 == 0 {solutions.push(solution.clone());}
     update_active_implications(solution, problem, active_implications);
     let (mut m, inactive) = determine_the_xj_that_have_just_become_active_and_inactive(active_implications, active_literals);
     let mut n: Vec<usize> = Vec::new();
     remove_from_active_list_and_remember_predecessor(active_literals, &inactive, &mut n);
     m.sort();
-    
-
+    //merge m and active literals in order
+    for j in m.iter().rev(){
+        if *j==i {break};
+        active_literals.push(*j);
+        active_literals.sort();
+        _enumerate(solution, active_literals, active_implications, *j, depth+1, solutions, problem);
+    }
+    if depth %2 == 1 {solutions.push(solution.clone());}
+    solution[i]=false;
+    for j in m.iter(){
+        active_literals.push(*j);
+    }
+    active_literals.sort();
+    update_active_implications(solution, problem, active_implications);
 }
 
 pub fn _solve_2_sat(phi: &Phi) -> Result<Vec<Option<bool>>, Error>
