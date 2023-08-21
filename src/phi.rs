@@ -246,6 +246,12 @@ impl Phi{
         variables
     }
 
+    pub fn invert_literal(&mut self,index: usize){
+        for clause in &mut self.clauses{
+            clause.invert_literal(index);
+        }
+    }
+
 }
 
 #[cfg(test)]
@@ -289,5 +295,18 @@ mod tests
         assert_eq!(units.len(), 2);
         assert_eq!(units[0], Clause::new_c1(1));
         assert_eq!(units[1], Clause::new_c1(4));
+    }
+
+    #[test]
+    fn phi_invert_literals()
+    {
+        let c1 = Clause::new_c3(1,2,3);
+        let c2 = Clause::new_c3(2,3,4);
+        let c3 = Clause::new_c3(1,-2,-3);
+        let mut phi = Phi{clauses: vec![c1,c2,c3]};
+        phi.invert_literal(1);
+        assert_eq!(phi.clauses[0], Clause::new_c3(1,-2,3));
+        assert_eq!(phi.clauses[1], Clause::new_c3(-2,3,4));
+        assert_eq!(phi.clauses[2], Clause::new_c3(1,2,-3));
     }
 }

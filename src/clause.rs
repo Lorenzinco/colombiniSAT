@@ -407,6 +407,40 @@ impl Clause
             }
         }
     }
+
+    pub fn invert_literal(&mut self, index : usize){
+        match self
+        {
+            Clause::C3(l1,l2,l3) => 
+            {
+                if l1.index == index {
+                    l1.value = !l1.value;
+                }
+                else if l2.index == index {
+                    l2.value = !l2.value;
+                }
+                else if l3.index == index {
+                    l3.value = !l3.value;
+                }
+            }, 
+            Clause::C2(l1,l2) => 
+            {
+                if l1.index == index {
+                    l1.value = !l1.value;
+                }
+                else if l2.index == index {
+                    l2.value = !l2.value;
+                }
+            },
+            Clause::C1(l1) => 
+            {
+                if l1.index == index {
+                    l1.value = !l1.value;
+                }
+            },
+            Clause::Empty => {}
+        }
+    }
 }
 
 #[cfg(test)]
@@ -445,6 +479,51 @@ mod tests
         assert_eq!(c.reduce(&values), None);
         values = [Some(false), Some(true), Some(false)];
         assert_eq!(c.reduce(&values), Some(Clause::Empty));
+    }
+
+    #[test]
+    fn clause_invert_literal()
+    {
+        let mut c3 = Clause::C3(
+            Literal{index: 0, value: true}, 
+            Literal{index: 1, value: false}, 
+            Literal{index: 2, value: true}
+        );
+
+        let mut c2 = Clause::C2(
+            Literal{index: 0, value: true}, 
+            Literal{index: 1, value: false}
+        );
+
+        let mut c1 = Clause::C1(
+            Literal{index: 0, value: true}
+        );
+
+        c3.invert_literal(0);
+        c2.invert_literal(0);
+        c1.invert_literal(0);
+
+        assert_eq!(c3, Clause::C3(
+            Literal{index: 0, value: false}, 
+            Literal{index: 1, value: false}, 
+            Literal{index: 2, value: true}
+        ));
+
+        assert_eq!(c2, Clause::C2(
+            Literal{index: 0, value: false}, 
+            Literal{index: 1, value: false}
+        ));
+
+        assert_eq!(c1, Clause::C1(
+            Literal{index: 0, value: false}
+        ));
+
+        c3.invert_literal(0);
+        assert_eq!(c3, Clause::C3(
+            Literal{index: 0, value: true}, 
+            Literal{index: 1, value: false}, 
+            Literal{index: 2, value: true}
+        ));
     }
 
 }
