@@ -50,12 +50,38 @@ cargo run --release
 ```
 
 ## How it works
-
+My euristics is a lookahead algorithm that tries to find implications between literals.
 First, let's define some terms:
 
-```math
-\text{let}\ n \text{ be the number of literals in }\phi \\ \forall i \in [1, n]\text{let } \phi\subseteq\phi \text{be a boolean CNF formula where the clauses are where the literal } x_i \text{ is present}.
-```
+let n be the number of literals in the formula
 
+foreach i in i to n let Phi'_i be a subset of Phi where the clauses of phi' are the ones from Phi that contain the literal xi
 
-### TODO: Full explaination of the algorithm
+Example:
+Phi = (x1 v x2 v x3) ^ (x1 v x3 v x4) ^ (x1 v x3 v x5) ^ (x2 v x3 v x4)
+Phi'_1 = (x1 v x2 v x3) ^ (x1 v x3 v x4) ^ (x1 v x3 v x5)
+Phi'_2 = (x1 v x2 v x3) ^ (x2 v x3 v x4)
+Phi'_3 = (x1 v x2 v x3) ^ (x1 v x3 v x4) ^ (x2 v x3 v x4)
+...
+
+Now let's observe some properties of Phi'_i:
+If some literal x_i satisfies its Phi'_i with only one assignment A={T|F}, then that literal is implied to be A in the current branch of Phi.
+
+Example:
+Phi'_1 = (x1 v x2 v x3) ^ (x1 v x3 v x4) ^ (x1 v x3 v x5)
+x1 is satisfied with only one assignment (T) in Phi'_1, so x1 is implied to be T in the current branch of Phi.
+
+While resolving some Phi'_i, if some other literal x_j takes the same assignment A in all satisfing assignments of Phi', then x_j is also implied to be A in the current branch of Phi.
+
+Example:
+Phi'_2 = (¬x2 v x3) ^ (x2 v x3) ^ (x2 v x3 v x4)
+x2 is satisfied with both assignments (T,F) in Phi'_2, so we can say nothing about x2 in Phi.
+x3 is satisfied with only one assignment (T) in Phi'_2, so x3 is implied to be T in the current branch of Phi.
+
+While resolving some Phi'_i let x_i the implication found , if some other literal x_j takes the same assignment in all satisfing assignments of Phi', then x_i => x_j in the current branch of Phi.
+
+Example:
+Phi'_3 = (x3) ^ (x1 v ¬x3) ^ (x2 v x3 v x4)
+x3 is satisfied with only one assignment (T) in Phi'_3, so x3 is implied to be T in the current branch of Phi.
+At the same time x3 = T means X1 = T in all satisfing assignments of Phi'_3, so x1 is implied to be T in the current branch of Phi.
+
