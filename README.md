@@ -51,4 +51,8 @@ cargo run --release
 
 ## How it works
 The solver uses the DPLL algorithm to solve the formula. (provisory)
+```math
+\fe \phi \in 3-SAT \exists \alpha \in \phi \mid \alpha \in \phi \land \neg \alpha \in \phi
+```
+
 ### TODO: Full explaination of the algorithm
