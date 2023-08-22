@@ -8,7 +8,7 @@ A simple 3-SAT solver written in Rust.
 #### Links
 [GitHub](https://github.com/Lorenzinco23/colombiniSAT "GitHub Repository page of the project.")
 
-[Linkedin Profile](https://www.linkedin.com/in/lorenzo-colombini-9b5244262/ "My Linkedin Profile.")
+
 ## How to use
 Create an istance of the Solver struct passing it the path to the DMACS file you wish to solve.
 
