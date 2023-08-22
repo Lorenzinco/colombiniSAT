@@ -184,7 +184,7 @@ impl Phi{
     {
         //get the clauses where literal with index index is present
         let mut clauses: Vec<Clause> = Vec::new();
-        for clause in &self.clauses{ if clause.contains(index){ clauses.push(*clause); } }
+        for clause in &self.clauses{ if clause.contains(index) && !clause.is_implicated(){ clauses.push(*clause); } }
         Phi{clauses}
     }
 
@@ -218,7 +218,7 @@ impl Phi{
         for (index,v) in fixed_vars.iter().enumerate()
         {
             match v {
-                Ok(b) => {new_units.push(Clause::C1(Literal{index: index, value: *b}))},
+                Ok(b) => {new_units.push(Clause::C1(Literal{index: index, value: *b, implicated: false}))},
                 Err(_) => {}
             }
         }
@@ -252,11 +252,23 @@ impl Phi{
         }
     }
 
+    pub fn get_implications(&self) -> Vec<Clause> {
+        let mut implications: Vec<Clause> = Vec::new();
+        for clause in &self.clauses{
+            if clause.is_implicated(){
+                implications.push(*clause);
+            }
+        }
+        implications
+    }
+
 }
 
 #[cfg(test)]
 mod tests
 {
+    use crate::clause::Implication;
+
     use super::*;
 
     #[test]
@@ -308,5 +320,17 @@ mod tests
         assert_eq!(phi.clauses[0], Clause::new_c3(1,-2,3));
         assert_eq!(phi.clauses[1], Clause::new_c3(-2,3,4));
         assert_eq!(phi.clauses[2], Clause::new_c3(1,2,-3));
+    }
+
+    #[test]
+    fn get_implications(){
+        let c1 = Clause::new_c3(1,2,3);
+        let c2 = Clause::new_c3(2,3,4);
+        let c3 = Clause::new_c3(1,-2,-3);
+        let c4 = Implication::new(1,2).to_clause();
+        let phi = Phi{clauses: vec![c1,c2,c3,c4]};
+        let implications = phi.get_implications();
+        assert_eq!(implications.len(), 1);
+        assert_eq!(implications[0], Implication::new(1,2).to_clause());
     }
 }

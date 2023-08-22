@@ -15,12 +15,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1370e9fc2a6ae53aea8b7a5110edbd08836ed87c88736dfabccade1c2b44bff4"
 
 [[package]]
+name = "bitflags"
+version = "2.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
+
+[[package]]
 name = "colombini_sat"
 version = "0.1.0"
 dependencies = [
  "dimacs",
  "petgraph",
  "sat",
+ "splr",
 ]
 
 [[package]]
@@ -29,7 +36,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75f6c12703392ff1f2c7cf298d27075ef1f40565c6af73a8ca72f16853563f84"
 dependencies = [
- "bitflags",
+ "bitflags 0.8.2",
 ]
 
 [[package]]
@@ -146,6 +153,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d83b2e85dadba750d119eaced494c9315d72ea35c1b25e31da4729ec32a0c922"
 dependencies = [
  "tempfile",
+]
+
+[[package]]
+name = "splr"
+version = "0.17.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f854e0085e5045046c082080c1ed41a346eb15d07afa526f960e35b09b495d8c"
+dependencies = [
+ "bitflags 2.4.0",
 ]
 
 [[package]]

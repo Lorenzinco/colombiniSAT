@@ -5,7 +5,8 @@ pub struct Literal
 {
     pub index: usize, 
     //the value that the literal must assume to become true
-    pub value: bool
+    pub value: bool,
+    pub implicated: bool
 }
 
 impl Literal
@@ -29,8 +30,8 @@ impl Implication
     /// USE 1-BASED INDEXING
     pub fn new(from: isize, to: isize) -> Implication
     {
-        Implication{from: Literal{index: from.abs() as usize - 1, value: from > 0}, 
-                    to: Literal{index: to.abs() as usize - 1, value: to > 0}}
+        Implication{from: Literal{index: from.abs() as usize - 1, value: from > 0, implicated: false}, 
+                    to: Literal{index: to.abs() as usize - 1, value: to > 0, implicated: true}}
     }
 
     pub fn to_clause(&self) -> Clause
@@ -74,9 +75,9 @@ impl Clause
         assert_ne!(v2, 0);
         assert_ne!(v3, 0);
 
-        Clause::C3(Literal{index: v1.abs() as usize - 1, value: v1 > 0}, 
-                   Literal{index: v2.abs() as usize - 1, value: v2 > 0}, 
-                   Literal{index: v3.abs() as usize - 1, value: v3 > 0})
+        Clause::C3(Literal{index: v1.abs() as usize - 1, value: v1 > 0, implicated: false}, 
+                   Literal{index: v2.abs() as usize - 1, value: v2 > 0, implicated: false}, 
+                   Literal{index: v3.abs() as usize - 1, value: v3 > 0, implicated: false})
     }
 
     // USE 1-BASED INDEXING
@@ -85,8 +86,8 @@ impl Clause
         assert_ne!(v1, 0);
         assert_ne!(v2, 0);
 
-        Clause::C2(Literal{index: v1.abs() as usize - 1, value: v1 > 0}, 
-                   Literal{index: v2.abs() as usize - 1, value: v2 > 0})
+        Clause::C2(Literal{index: v1.abs() as usize - 1, value: v1 > 0, implicated: false}, 
+                   Literal{index: v2.abs() as usize - 1, value: v2 > 0, implicated: false})
     }
 
     // USE 1-BASED INDEXING
@@ -94,7 +95,14 @@ impl Clause
     {
         assert_ne!(v1, 0);
 
-        Clause::C1(Literal{index: v1.abs() as usize - 1, value: v1 > 0})
+        Clause::C1(Literal{index: v1.abs() as usize - 1, value: v1 > 0, implicated: false})
+    }
+
+    pub fn new_c1_implicated(v1: isize) -> Clause
+    {
+        assert_ne!(v1, 0);
+
+        Clause::C1(Literal{index: v1.abs() as usize - 1, value: v1 > 0, implicated: true})
     }
 
     pub fn get_literal(&self, index: usize) -> Option<Literal>
@@ -121,6 +129,26 @@ impl Clause
             },
             Clause::Empty => None
         }
+    }
+
+    pub fn is_implicated(&self)->bool{
+        match self
+        {
+            Clause::C2(l1, l2) => 
+            {
+                if l1.implicated || l2.implicated {
+                    return true;
+                }
+            },
+            Clause::C1(l1) => 
+            {
+                if l1.implicated {
+                    return true;
+                }
+            },
+            _ => {}
+        }
+        false
     }
 
     pub fn literals_vector(&self) -> Vec<Literal>
@@ -451,9 +479,9 @@ mod tests
     fn eval()
     {
         let c = Clause::C3(
-            Literal{index: 0, value: true}, 
-            Literal{index: 1, value: false}, 
-            Literal{index: 2, value: true}
+            Literal{index: 0, value: true, implicated: false}, 
+            Literal{index: 1, value: false, implicated: false},
+            Literal{index: 2, value: true, implicated: false}
         );
 
         let mut values = [true, true, false];
@@ -468,9 +496,9 @@ mod tests
     fn reduce()
     {
         let c = Clause::C3(
-            Literal{index: 0, value: true}, 
-            Literal{index: 1, value: false}, 
-            Literal{index: 2, value: true}
+            Literal{index: 0, value: true, implicated: false}, 
+            Literal{index: 1, value: false, implicated: false}, 
+            Literal{index: 2, value: true, implicated: false}
         );
 
         let mut values: [Option<bool>; 3] = [None, None, None];
@@ -485,18 +513,18 @@ mod tests
     fn clause_invert_literal()
     {
         let mut c3 = Clause::C3(
-            Literal{index: 0, value: true}, 
-            Literal{index: 1, value: false}, 
-            Literal{index: 2, value: true}
+            Literal{index: 0, value: true, implicated: false}, 
+            Literal{index: 1, value: false, implicated: false}, 
+            Literal{index: 2, value: true, implicated: false}
         );
 
         let mut c2 = Clause::C2(
-            Literal{index: 0, value: true}, 
-            Literal{index: 1, value: false}
+            Literal{index: 0, value: true, implicated: false}, 
+            Literal{index: 1, value: false, implicated: false}
         );
 
         let mut c1 = Clause::C1(
-            Literal{index: 0, value: true}
+            Literal{index: 0, value: true, implicated: false}
         );
 
         c3.invert_literal(0);
@@ -504,26 +532,25 @@ mod tests
         c1.invert_literal(0);
 
         assert_eq!(c3, Clause::C3(
-            Literal{index: 0, value: false}, 
-            Literal{index: 1, value: false}, 
-            Literal{index: 2, value: true}
+            Literal{index: 0, value: false, implicated: false}, 
+            Literal{index: 1, value: false, implicated: false}, 
+            Literal{index: 2, value: true, implicated: false}
         ));
 
         assert_eq!(c2, Clause::C2(
-            Literal{index: 0, value: false}, 
-            Literal{index: 1, value: false}
+            Literal{index: 0, value: false, implicated: false}, 
+            Literal{index: 1, value: false, implicated: false}
         ));
 
         assert_eq!(c1, Clause::C1(
-            Literal{index: 0, value: false}
+            Literal{index: 0, value: false, implicated: false}
         ));
 
         c3.invert_literal(0);
         assert_eq!(c3, Clause::C3(
-            Literal{index: 0, value: true}, 
-            Literal{index: 1, value: false}, 
-            Literal{index: 2, value: true}
+            Literal{index: 0, value: true, implicated: false}, 
+            Literal{index: 1, value: false, implicated: false}, 
+            Literal{index: 2, value: true, implicated: false}
         ));
     }
-
 }
