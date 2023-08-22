@@ -1,6 +1,10 @@
 # Colombini-SAT
 A simple 3-SAT solver written in Rust.
 
+[![MacOS](https://github.com/Lorenzinco23/colombiniSAT/actions/workflows/macos.yml/badge.svg)](https://github.com/Lorenzinco23/colombiniSAT/actions/workflows/macos.yml)
+[![Ubuntu](https://github.com/Lorenzinco23/colombiniSAT/actions/workflows/ubuntu.yml/badge.svg)](https://github.com/Lorenzinco23/colombiniSAT/actions/workflows/ubuntu.yml)
+[![Windows](https://github.com/Lorenzinco23/colombiniSAT/actions/workflows/rust.yml/badge.svg)](https://github.com/Lorenzinco23/colombiniSAT/actions/workflows/rust.yml)
+
 [GitHub](https://github.com/Lorenzinco23/colombiniSAT "GitHub Repository page of the project.")
 
 [Linkedin Profile](https://www.linkedin.com/in/lorenzo-colombini-9b5244262/ "My Linkedin Profile.")
