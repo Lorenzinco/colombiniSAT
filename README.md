@@ -28,6 +28,22 @@ match solution{
     }
 ```
 
+## Compiling
+To compile the project you need to have Rust installed on your machine.
+You can download Rust from [here](https://www.rust-lang.org/tools/install "Rust download page").
+
+Once you have Rust installed, you can run the following command to see if everything is working:
+
+```bash
+cargo test
+```
+
+If everything is working correctly you can now run the following command to compile and run the project:
+
+```bash
+cargo run --release
+```
+
 ## How it works
 The solver uses the DPLL algorithm to solve the formula. (provisory)
 ### TODO: Full explaination of the algorithm

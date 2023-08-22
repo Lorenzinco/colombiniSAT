@@ -21,9 +21,9 @@ impl Solver{
         /// * A Solver object or an Error if the path to the file is incorrect.
         /// # Example
         /// ```
-        /// use colombini_sat::*;
+        /// use colombini_sat::solver::Solver;
         /// 
-        /// let solver = Solver::create("test.cnf").unwrap();
+        /// let solver = Solver::create("TestData/test.cnf").unwrap();
         /// ```
     pub fn create(dmacs_path: &str)->Result<Solver,Box<dyn error::Error>>{
         
@@ -33,21 +33,46 @@ impl Solver{
         }
     }
 
+    ///Returns the number of literals in the formula
+    pub fn num_variables(&self)->usize{
+        self.phi.vars()
+    }
+
+    ///Returns the number of clauses in the formula
+    pub fn num_clauses(&self)->usize{
+        self.phi.clauses.len()
+    }
+
 
     ///Returns a satisfying assignment for the formula if it exists, None otherwise
     /// # Example
     /// ```
-    /// use colombini_sat::*;
+    /// use colombini_sat::solver::Solver;
     /// 
-    /// let solver = Solver::create("test.cnf").unwrap();
+    /// let solver = Solver::create("TestData/test.cnf").unwrap();
     /// let solution = solver.solve();
     /// match solution{
     ///    Some(solution) => {println!("SAT({:?})",solution);},
     ///   None => {println!("UNSAT");}
     /// }
     /// ```
-    pub fn solve(&self)->Option<Vec<bool>>{
-        return solve(&self.phi);
+    pub fn solve(&self)->Option<Vec<isize>>{
+        let solution = solve(&self.phi);
+        match solution{
+            Some(solution) => {
+                let mut assignment: Vec<isize> = vec![0;self.phi.vars()];
+                for (index,value) in solution.iter().enumerate(){
+                    if *value{
+                        assignment[index] = index as isize +1;
+                    }
+                    else{
+                        assignment[index] = -(index as isize +1);
+                    }
+                }
+                return Some(assignment);
+            },
+            None => None
+        }
     }
 }
 
