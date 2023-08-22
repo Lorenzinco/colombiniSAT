@@ -50,9 +50,12 @@ cargo run --release
 ```
 
 ## How it works
-The solver uses the DPLL algorithm to solve the formula. (provisory)
+
+First, let's define some terms:
+
 ```math
-\fe \phi \in 3-SAT \exists \alpha \in \phi \mid \alpha \in \phi \land \neg \alpha \in \phi
+\text{let}\ n \text{ be the number of literals in }\phi \\ \forall i \in [1, n]\text{let } \phi\subseteq\phi \text{be a boolean CNF formula where the clauses are where the literal } x_i \text{ is present}.
 ```
+
 
 ### TODO: Full explaination of the algorithm
