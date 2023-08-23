@@ -73,7 +73,7 @@ $`\forall i \in [1, n]`$ let $`\phi'_i \subseteq \phi`$ be the subformula contai
 
 
 
-$`\phi\ = (x_1 \vee x_2 \vee x_3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_1 \vee x_3 \vee x_5) \wedge (x_2 \vee x_3 \vee x_4)\\ `$
+$\phi\ = (x_1 \vee x_2 \vee x_3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_1 \vee x_3 \vee x_5) \wedge (x_2 \vee x_3 \vee x_4)\\ $
 
 $`\phi'_1 = (x_1 \vee x_2 \vee x3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_1 \vee x_3 \vee x_5)\\ `$
 
