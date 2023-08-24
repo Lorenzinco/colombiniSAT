@@ -1,6 +1,8 @@
 use std::vec;
 use std::error;
 
+use petgraph::{graph::DiGraph,stable_graph::NodeIndex,Direction::Incoming};
+
 use crate::{phi::Phi, error::Error, clause::{Clause, Literal, Implication}, two_satisfiability::solve_2_sat};
 
 /*
@@ -76,8 +78,11 @@ impl Solver{
     }
 }
 
-
-
+/* 
+fn conflict_to_clauses(conflict: &Vec<Literal>)->Vec<Clause>{
+    //TODO
+}
+*/
 fn _dpll(phi: &Phi, mut assignments: Vec<Option<bool>>) -> Option<Vec<Option<bool>>>
 {
     let new_phi = phi.autoreduce_with_assignments(&mut assignments);
@@ -152,6 +157,32 @@ pub fn dpll(phi: &Phi) -> Option<Vec<Option<bool>>>
     }
 }
 
+///add a decision literal to the graph
+    /// # Arguments
+    /// * `graph` - A mutable reference to a DiGraph<Literal,Literal>
+    /// * `lit` - The literal to add
+pub fn add_decision(lit: Literal, graph: &mut DiGraph<Literal,Literal>)->NodeIndex{
+    return graph.add_node(lit);
+}
+
+///add an implication a -> b to the graph
+    /// # Arguments
+    /// * `graph` - A mutable reference to a DiGraph<Literal,Literal>
+    /// * `a` - The first literal
+    /// * `b` - The second literal
+pub fn add_implication(a: Literal, b: Literal, graph: &mut DiGraph<Literal,Literal>)->(NodeIndex,NodeIndex){
+    if !graph.node_weights().any(|x| x == &a){
+        graph.add_node(b);
+    }
+    if !graph.node_weights().any(|x| x == &b){
+        graph.add_node(b);
+    }
+
+    let node1 = graph.node_indices().find(|i| graph[*i] == a).unwrap();
+    let node2 = graph.node_indices().find(|i| graph[*i] == b).unwrap();
+    graph.add_edge(node1,node2,Literal{index:0,value:false,implicated:false});
+    (node1,node2)
+}
 
 pub fn solve(phi: &Phi) -> Option<Vec<bool>>
 {
@@ -253,15 +284,6 @@ pub fn solve(phi: &Phi) -> Option<Vec<bool>>
                 },
             }
         }
-        /* 
-        //print all the clauses that are in phi but not in og_phi
-        for clause in phi.clauses.iter(){
-            if !og_phi.clauses.contains(clause){
-                print!("{}",clause);
-            }
-        }
-        println!();
-*/
         if !added_unit_clause
         {
             //if no literal is forced to be true or false, choose one and backtrack
@@ -313,6 +335,7 @@ pub fn solve(phi: &Phi) -> Option<Vec<bool>>
 mod tests
 {
     use crate::phi::*;
+    use crate::solver::*;
     
 
     #[test]
@@ -344,5 +367,26 @@ mod tests
         let phi = Phi::from_file("TestData/test.cnf").unwrap();
         let result = super::dpll(&phi);
         assert!(result.is_some());
+    }
+
+    #[test]
+    fn create_implications(){
+        let mut graph = DiGraph::<Literal,Literal>::new();
+        let x1 = Literal{index: 0, value: true, implicated: false};
+        let x2 = Literal{index: 1, value: true, implicated: false};
+        let x3 = Literal{index: 2, value: true, implicated: false};
+        let x4 = Literal{index: 3, value: true, implicated: false};
+
+        add_decision(x1,&mut graph);
+        add_decision(x2,&mut graph);
+
+        add_implication(x1,x3,&mut graph);
+        add_implication(x2,x3,&mut graph);
+
+        let (n3,_) = add_implication(x3,x4,&mut graph);
+
+        assert_eq!(graph.node_count(),4);
+        assert_eq!(graph.edge_count(),3);
+        assert_eq!(graph.neighbors_directed(n3,Incoming).count(),2)
     }
 }

@@ -6,7 +6,8 @@ pub struct Literal
     pub index: usize, 
     //the value that the literal must assume to become true
     pub value: bool,
-    pub implicated: bool
+    pub implicated: bool,
+    pub assigned: bool
 }
 
 impl Literal
@@ -30,8 +31,8 @@ impl Implication
     /// USE 1-BASED INDEXING
     pub fn new(from: isize, to: isize) -> Implication
     {
-        Implication{from: Literal{index: from.abs() as usize - 1, value: from > 0, implicated: false}, 
-                    to: Literal{index: to.abs() as usize - 1, value: to > 0, implicated: true}}
+        Implication{from: Literal{index: from.abs() as usize - 1, value: from > 0, implicated: false,assigned: false}, 
+                    to: Literal{index: to.abs() as usize - 1, value: to > 0, implicated: true,assigned: false}}
     }
 
     pub fn to_clause(&self) -> Clause
@@ -46,6 +47,7 @@ impl Implication
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Clause 
 {
+    //clause with indefinite number of literals in it
     C3(Literal, Literal, Literal),
     C2(Literal, Literal),
     C1(Literal),
@@ -469,6 +471,57 @@ impl Clause
             Clause::Empty => {}
         }
     }
+
+    ///returns the 3-SAT reduction of the clause
+    /// # Arguments:
+    /// * `clause` - A vector of literals representing a k-sat clause
+    /// * `last_index` - The number of variables in the formula
+    /// # Outputs:
+    /// * `Vec<Clause>` - A vector of 3-SAT clauses
+    pub fn from_k_clause(clause :Vec<Literal>,last_index: usize) -> Vec<Clause>{
+
+        let mut result: Vec<Clause> = Vec::new();
+        match clause.len(){
+            1 => {
+                result.push(Clause::C1(clause[0]));
+                return result
+            },
+            2 => {
+                result.push(Clause::C2(clause[0],clause[1]));
+                return result
+            },
+            3 => {
+                result.push(Clause::C3(clause[0],clause[1],clause[2]));
+                return result
+            },
+            _ => {}
+        }
+
+        let mut literals = clause.clone();
+        
+        let mut foo_vars = 0;
+
+        let lit1 = literals.pop().unwrap();
+        let lit2 = literals.pop().unwrap();
+        let foo = Literal{index: last_index+foo_vars, value: true, implicated: false};
+
+        result.push(Clause::C3(lit1,lit2,foo));
+
+        while literals.len() > 2{
+            let foo1 = Literal{index: last_index+foo_vars, value: false, implicated: false};
+            let lit = literals.pop().unwrap();
+            foo_vars += 1;
+            let foo2 = Literal{index: last_index+foo_vars, value: true, implicated: false};
+            result.push(Clause::C3(foo1,lit,foo2));
+        }
+
+        let foo = Literal{index: last_index+foo_vars, value: false, implicated: false};
+        let lit1 = literals.pop().unwrap();
+        let lit2 = literals.pop().unwrap();
+        result.push(Clause::C3(foo,lit1,lit2));
+
+        result
+    }
 }
 
 #[cfg(test)]
@@ -552,5 +605,54 @@ mod tests
             Literal{index: 1, value: false, implicated: false}, 
             Literal{index: 2, value: true, implicated: false}
         ));
+    }
+
+    #[test]
+    fn reduction(){
+        let lit1= Literal{index: 0, value: true, implicated: false};
+        let lit2= Literal{index: 1, value: true, implicated: false};
+        let lit3= Literal{index: 2, value: true, implicated: false};
+        let lit4= Literal{index: 3, value: true, implicated: false};
+
+        let c = vec![lit1,lit2,lit3,lit4];
+
+        let result = Clause::from_k_clause(c,4);
+
+        let correct = vec![Clause::C3(
+            Literal{index: 3, value: true, implicated: false}, 
+            Literal{index: 2, value: true, implicated: false}, 
+            Literal{index: 4, value: true, implicated: false}
+        ),
+        Clause::C3(
+            Literal{index: 4, value: false, implicated: false}, 
+            Literal{index: 1, value: true, implicated: false}, 
+            Literal{index: 0, value: true, implicated: false}
+        )];
+        assert_eq!(result.len(), 2);
+        assert_eq!(result,correct);
+
+        let lit5 = Literal{index: 4, value: true, implicated: false};
+        let c = vec![lit1,lit2,lit3,lit4,lit5];
+
+        let result = Clause::from_k_clause(c,5);
+
+        let correct = vec![Clause::C3(
+            Literal{index: 4, value: true, implicated: false}, 
+            Literal{index: 3, value: true, implicated: false}, 
+            Literal{index: 5, value: true, implicated: false}
+        ),
+        Clause::C3(
+            Literal{index: 5, value: false, implicated: false}, 
+            Literal{index: 2, value: true, implicated: false}, 
+            Literal{index: 6, value: true, implicated: false}
+        ),
+        Clause::C3(
+            Literal{index: 6, value: false, implicated: false}, 
+            Literal{index: 1, value: true, implicated: false}, 
+            Literal{index: 0, value: true, implicated: false}
+        )];
+        assert_eq!(result.len(), 3);
+        assert_eq!(result,correct);
+
     }
 }

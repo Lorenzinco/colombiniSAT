@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use petgraph::{graph::{Graph, NodeIndex}, algo};
+use petgraph::{graph::{Graph, NodeIndex}, algo, prelude::DiGraph};
 use crate::{phi::Phi, error::Error, clause::Clause};
 
 
@@ -58,8 +58,8 @@ fn remove_from_active_list_and_remember_predecessor(active_literals: &mut Vec<us
 
 }
 
-pub fn create_graph(phi: &Phi)->Graph<isize,isize>{
-    let mut graph = Graph::<isize,isize>::new();
+pub fn create_graph(phi: &Phi)->Option<DiGraph<isize,isize>>{
+    let mut graph = DiGraph::<isize,isize>::new();
     let mut added_literals = HashMap::<isize,NodeIndex>::new();
 
     //remove unit clauses
@@ -74,11 +74,10 @@ pub fn create_graph(phi: &Phi)->Graph<isize,isize>{
         {
             Clause::C3(_,_,_) => { panic!("Not a 2-sat formula")},
             Clause::C2(l1,l2) => {
-
                 for i in 0..2
                 {
-                    let index1: isize = if i == 0 { -l1.as_isize() } else { l1.as_isize() };
-                    let index2 = if i == 0 { l2.as_isize() } else { -l2.as_isize() };
+                    let index1: isize = if i == 0 { -l1.as_isize() } else { -l2.as_isize() };
+                    let index2: isize = if i == 0 { l2.as_isize() } else { l1.as_isize() };
 
                     let mut n1 = added_literals.get(&index1).copied();
                     match n1 {
@@ -98,14 +97,14 @@ pub fn create_graph(phi: &Phi)->Graph<isize,isize>{
                         }
                         Some(_) => {}
                     }
-                    graph.add_edge(n1.unwrap(), n2.unwrap(), 1);
+                    graph.add_edge(n1.unwrap(), n2.unwrap(), 0);
                 }
             },
             Clause::C1(_) => { unreachable!() },
-            Clause::Empty => { panic!("Not satisfiable, empty clause given.") },
+            Clause::Empty => { return None },
         }
     }
-    graph
+    Some(graph)
 }
 
 pub fn enumerate(og_solution: &Vec<Option<bool>>, phi_prime: &Phi){
@@ -371,74 +370,32 @@ pub fn _solve_2_sat(phi: &Phi) -> Result<Vec<Option<bool>>, Error>
 
 pub fn solve_2_sat(phi: &Phi,n:usize) -> Result<Vec<Option<bool>>, Error>
 {
-    let mut graph = Graph::<isize,i8>::new();
-    let mut added_literals = HashMap::<isize,NodeIndex>::new();
-
     //remove unit clauses
     let mut assignments: Vec<Option<bool>> = vec![None;n];
     let rphi = phi.autoreduce_with_assignments(&mut assignments);
-    //check that all clauses in phi are 2-sat and
-    //for each clause in phi, create a graph composed by each literal being a node 
-    //and each clause impling two edges between the two literals in the clause
-    for clause in &rphi.clauses
-    {
-        match clause
-        {
-            Clause::C3(_,_,_) => { return Err(Error::new("Not a 2-sat formula").into()) }
-            Clause::C2(l1,l2) => {
 
-                for i in 0..2
-                {
-                    let index1: isize = if i == 0 { -l1.as_isize() } else { l1.as_isize() };
-                    let index2 = if i == 0 { l2.as_isize() } else { -l2.as_isize() };
+    //create implication graph
+    let implications = create_graph(&rphi);
+    let graph:DiGraph<isize,isize>;
 
-                    let mut n1 = added_literals.get(&index1).copied();
-                    match n1 {
-                        None => {
-                            let node = graph.add_node(index1);
-                            n1 = Some(node);
-                            added_literals.insert(index1, node);
-                        }
-                        Some(_) => {}
-                    }
-                    let mut n2 = added_literals.get(&index2).copied();
-                    match n2 {
-                        None => {
-                            let node = graph.add_node(index2);
-                            n2 = Some(node);
-                            added_literals.insert(index2, node);
-                        }
-                        Some(_) => {}
-                    }
-                    graph.add_edge(n1.unwrap(), n2.unwrap(), 1);
-                }
-            },
-            Clause::C1(_) => { unreachable!() },
-            Clause::Empty => { return Err(Error::new("Not satisfiable, empty clause given.").into()) },
-        }
+    match implications{
+        Some(g)=>{graph = g}
+        None => {return Err(Error::new("Not satisfiable, found empty clause in 2-sat"))}
     }
 
     //find all completely connected groups
-    let mut sccs = algo::tarjan_scc(&graph);
+    let mut sccs: Vec<Vec<NodeIndex>> = algo::tarjan_scc(&graph);
     sccs.reverse();
     //explore the groups and find if there is a node with a completely connected (two way) path to its negation
     /*the groups are returned in reverse topological order so, a satisfyng assignment 
     can be found by assigning the variables in the reverse order of the groups*/
     for scc in sccs
     {
+        let mut added_literals = HashMap::<isize,NodeIndex>::new();
         for node in &scc
         {
             let index: isize = graph[*node];
-            /*match assignments[arr_index]{
-                Some(_) => {},
-                None => {
-                if index > 0{
-                    assignments[arr_index] = Some(true);
-                }else{
-                    assignments[arr_index] = Some(false);
-                }}
-            }
-            */
+            added_literals.insert(index, *node);
             let negation = -index;
             let negation_node = added_literals.get(&negation).copied();
             if let Some(negation_node) = negation_node
@@ -451,7 +408,6 @@ pub fn solve_2_sat(phi: &Phi,n:usize) -> Result<Vec<Option<bool>>, Error>
         }
     }
 
-    
     Ok(assignments)
 }
 
@@ -481,7 +437,7 @@ pub fn unrestrained_vector(phi: &Phi) -> Vec<usize>
 
 #[cfg(test)]
 mod tests{
-    use crate::{phi::Phi, clause::Clause};
+    use crate::{phi::Phi, clause::Clause, two_satisfiability::create_graph};
 
     #[test]
     fn unrestrained_vector(){
@@ -523,6 +479,36 @@ mod tests{
         };
         let result = super::solve_2_sat(&phi,phi.vars());
         assert!(result.is_ok());
+
+        let phi = Phi{
+            clauses: vec![
+                Clause::new_c2(1,-2),
+                Clause::new_c2(1,2),
+                Clause::new_c2(-1,2),
+                Clause::new_c2(-1,-2),
+                Clause::new_c2(1,-3),
+            ]
+        };
+        let result = super::solve_2_sat(&phi,phi.vars());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn graph(){
+        let phi = Phi{
+            clauses: vec![
+                Clause::new_c2(1,-2),
+                Clause::new_c2(-1,2),
+                Clause::new_c2(-1,-2),
+                Clause::new_c2(1,-3),
+            ]
+        };
+
+        let graph = create_graph(&phi);
+        println!("{:?}",graph);
+
+
+
     }
 
 }

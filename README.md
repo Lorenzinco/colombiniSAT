@@ -75,11 +75,11 @@ $\forall i \in [1, n]$ let $\phi'_i \subseteq \phi$ be the subformula containing
 
 $\phi\ = (x_1 \vee x_2 \vee x_3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_1 \vee x_3 \vee x_5) \wedge (x_2 \vee x_3 \vee x_4)$
 
-$\phi'_1 = (x_1 \vee x_2 \vee x3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_1 \vee x_3 \vee x_5)$
+$\phi'_1 = (x_1 \vee x_2 \vee x_3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_1 \vee x_3 \vee x_5)$
 
-$\phi'_2 = (x_1 \vee x_2 \vee x3) \wedge (x_2 \vee x_3 \vee x_4)$
+$\phi'_2 = (x_1 \vee x_2 \vee x_3) \wedge (x_2 \vee x_3 \vee x_4)$
 
-$\phi'_3 = (x_1 \vee x_2 \vee x3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_2 \vee x_3 \vee x_4)$
+$\phi'_3 = (x_1 \vee x_2 \vee x_3) \wedge (x_1 \vee x_3 \vee x_4) \wedge (x_2 \vee x_3 \vee x_4)$
 
 $\vdots$
 
