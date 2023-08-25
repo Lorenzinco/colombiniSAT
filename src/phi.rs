@@ -62,14 +62,28 @@ impl Phi{
         ret
     }
 
+    pub fn adapt(&self) -> Phi
+    {
+        let mut ret = Phi::new();
+        for c in &self.clauses
+        {
+            if let Some(new_clause) = c.adapt()
+            {
+                if let Clause::Empty = new_clause { return Phi::new_unsat(); }
+                ret.clauses.push(new_clause);
+            }
+        }
+        ret
+    }
+
     pub fn find_unit(&self) -> Vec<Clause>
     {
         let mut ret: Vec<Clause> = Vec::new();
         for c in &self.clauses
         {
-            if let Clause::C1(_) = c
+            if let Clause::C1(lit) = c
             {
-                ret.push(*c);
+                if !lit.assigned{ret.push(*c);}
             }
         }
         ret
@@ -77,7 +91,7 @@ impl Phi{
 
     pub fn autoreduce_with_assignments(&self, assignments: &mut Vec<Option<bool>>) -> Phi
     {
-        let units = self.find_unit();
+        let units = self.adapt().find_unit();
         if units.len() == 0 {self.clone()}
         else 
         {
@@ -218,7 +232,7 @@ impl Phi{
         for (index,v) in fixed_vars.iter().enumerate()
         {
             match v {
-                Ok(b) => {new_units.push(Clause::C1(Literal{index: index, value: *b, implicated: false}))},
+                Ok(b) => {new_units.push(Clause::C1(Literal{index: index, value: *b, implicated: false,assigned:false}))},
                 Err(_) => {}
             }
         }
@@ -237,8 +251,8 @@ impl Phi{
         let mut variables: HashSet<usize> = HashSet::new();
         for clause in &self.clauses{
             for literal in clause.get_variables(){
-                if !variables.contains(&literal){
-                    variables.insert(literal);
+                if !variables.contains(&literal.index)&&!literal.assigned{
+                    variables.insert(literal.index);
                 }
             }
         }
@@ -252,7 +266,7 @@ impl Phi{
         }
     }
 
-    pub fn get_implications(&self) -> Vec<Clause> {
+    pub fn get_added_clauses(&self) -> Vec<Clause> {
         let mut implications: Vec<Clause> = Vec::new();
         for clause in &self.clauses{
             if clause.is_implicated(){
@@ -260,6 +274,47 @@ impl Phi{
             }
         }
         implications
+    }
+
+    pub fn get_implications(&self) -> Vec<Clause> {
+        let mut implications: Vec<Clause> = Vec::new();
+        for clause in &self.clauses{
+            match clause{
+                Clause::C3(l1,l2,l3) => {
+                    let mut num_chosen: usize = 0;
+                    if l1.assigned {num_chosen += 1}
+                    if l2.assigned {num_chosen += 1}
+                    if l3.assigned {num_chosen += 1}
+                    if num_chosen == 2 {
+                        implications.push(*clause);
+                    }
+                }
+                Clause::C2(l1,l2) => {
+                    let mut num_chosen: usize = 0;
+                    if l1.assigned {num_chosen += 1}
+                    if l2.assigned {num_chosen += 1}
+                    if num_chosen == 1 {
+                        implications.push(*clause);
+                    }
+                }
+                Clause::C1(_) => {implications.push(*clause)}
+                _ => {unreachable!()}
+                }
+            }
+        implications
+    }
+
+    pub fn update_implications(&mut self, clause: &Clause){
+        match clause{
+            Clause::C1(lit)=>{
+                for clause in &mut self.clauses{
+                    if clause.contains(lit.index){
+                        clause.update_implications(&lit);
+                    }
+                }
+            }
+            _=>{}
+        }
     }
 
 }
@@ -324,12 +379,29 @@ mod tests
 
     #[test]
     fn get_implications(){
+        let l1 = Literal{index: 0, value: true, implicated: false, assigned: true};
+        let l2 = Literal{index: 1, value: true, implicated: false, assigned: false};
+        let l3 = Literal{index: 2, value: true, implicated: false, assigned: true};
+        let l4 = Literal{index: 3, value: true, implicated: false, assigned: false};
+
+        let c1 = Clause::C3(l1,l2,l3);
+        let c2 = Clause::C3(l1,l2,l4);
+        let c3 = Clause::C2(l1,l2);
+
+        let phi = Phi{clauses: vec![c1,c2,c3]};
+        let implications = phi.get_implications();
+
+        assert_eq!(implications, vec![c1,c3]);
+    }
+
+    #[test]
+    fn get_added_clauses(){
         let c1 = Clause::new_c3(1,2,3);
         let c2 = Clause::new_c3(2,3,4);
         let c3 = Clause::new_c3(1,-2,-3);
         let c4 = Implication::new(1,2).to_clause();
         let phi = Phi{clauses: vec![c1,c2,c3,c4]};
-        let implications = phi.get_implications();
+        let implications = phi.get_added_clauses();
         assert_eq!(implications.len(), 1);
         assert_eq!(implications[0], Implication::new(1,2).to_clause());
     }

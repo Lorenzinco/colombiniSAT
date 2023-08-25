@@ -3,7 +3,6 @@ use petgraph::{graph::{Graph, NodeIndex}, algo, prelude::DiGraph};
 use crate::{phi::Phi, error::Error, clause::Clause};
 
 
-
 fn update_active_implications(solution: &mut Vec<bool>,problem: &Vec<(isize,isize)>,active_implications: &mut Vec<(isize,isize)>){
     active_implications.clear();
     for (i,xi_true) in solution.iter().enumerate(){
@@ -64,7 +63,8 @@ pub fn create_graph(phi: &Phi)->Option<DiGraph<isize,isize>>{
 
     //remove unit clauses
     let mut assignments: Vec<Option<bool>> = vec![None;phi.vars()];
-    let rphi = phi.autoreduce_with_assignments(&mut assignments);
+    let mut rphi = phi.autoreduce_with_assignments(&mut assignments);
+    rphi = rphi.adapt();
     //check that all clauses in phi are 2-sat and
     //for each clause in phi, create a graph composed by each literal being a node 
     //and each clause impling two edges between the two literals in the clause
@@ -372,8 +372,8 @@ pub fn solve_2_sat(phi: &Phi,n:usize) -> Result<Vec<Option<bool>>, Error>
 {
     //remove unit clauses
     let mut assignments: Vec<Option<bool>> = vec![None;n];
-    let rphi = phi.autoreduce_with_assignments(&mut assignments);
-
+    let mut rphi = phi.autoreduce_with_assignments(&mut assignments);
+    rphi = rphi.adapt();
     //create implication graph
     let implications = create_graph(&rphi);
     let graph:DiGraph<isize,isize>;
@@ -411,60 +411,11 @@ pub fn solve_2_sat(phi: &Phi,n:usize) -> Result<Vec<Option<bool>>, Error>
     Ok(assignments)
 }
 
-///Returns a list of variables that are not forced to be true or false
-pub fn unrestrained_vector(phi: &Phi) -> Vec<usize>
-{
-    let mut reserves: Vec<usize> = vec![];
-    let var_count = phi.vars();
-    let vars = phi.get_variables();
-    let mut assignment: Vec<Option<bool>> = vec![None;var_count];
-    for index in &vars{
-        
-        let phi_prime = phi.phi_prime(*index);
-        assignment[*index] = Some(true);
-        let phi_prime_true = phi_prime.reduce(&assignment);
-        assignment[*index] = Some(false);
-        let phi_prime_false = phi_prime.reduce(&assignment);
-        assignment[*index] = None;
-        let result_true = solve_2_sat(&phi_prime_true,var_count).is_ok();
-        let result_false = solve_2_sat(&phi_prime_false,var_count).is_ok();
-        if result_true && result_false{
-            reserves.push(*index);
-        }
-    } 
-    reserves
-}
+
 
 #[cfg(test)]
 mod tests{
     use crate::{phi::Phi, clause::Clause, two_satisfiability::create_graph};
-
-    #[test]
-    fn unrestrained_vector(){
-        let phi = Phi{
-            clauses: vec![
-                Clause::new_c3(-2,3,-4),
-                Clause::new_c3(-1,3,5),
-                Clause::new_c3(-2,3,-5),
-                Clause::new_c3(-1,4,-5),
-                Clause::new_c3(-2,4,5),
-                Clause::new_c3(-1,4,-5),
-                Clause::new_c3(2,3,-4),
-                Clause::new_c3(-1,-3,4),
-                Clause::new_c3(-1,3,5),
-                Clause::new_c3(-1,-2,4),
-                Clause::new_c3(-1,3,-5),
-                Clause::new_c3(1,-2,3)
-            ]
-        };
-        let result = super::unrestrained_vector(&phi);
-        println!("{:?}",result);
-        assert!(result.contains(&0));
-        assert!(result.contains(&1));
-        assert!(result.contains(&2));
-        assert!(result.contains(&3));
-        assert!(result.contains(&4));
-    }
 
     #[test]
     fn solve_2_sat()
