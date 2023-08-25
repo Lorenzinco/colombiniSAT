@@ -4,7 +4,7 @@ use colombini_sat::{solver::{Solver, add_decision, add_implication}, clause::{Li
 use petgraph::prelude::DiGraph;
 
 fn main() {
-    let solver = Solver::create("TestData/solver3.cnf").unwrap();
+    let solver = Solver::create("TestData/solver20-0.cnf").unwrap();
     
     println!("Solving 3-SAT formula with {} variables and {} clauses", solver.num_variables(), solver.num_clauses());
     let start = std::time::Instant::now();

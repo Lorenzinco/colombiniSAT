@@ -92,7 +92,7 @@ impl Phi{
     pub fn autoreduce_with_assignments(&self, assignments: &mut Vec<Option<bool>>) -> Phi
     {
         let units = self.adapt().find_unit();
-        if units.len() == 0 {self.clone()}
+        if units.len() == 0 {self.reduce(&assignments)}
         else 
         {
             for c in &units

@@ -362,6 +362,10 @@ pub fn solve(phi: &Phi) -> Option<Vec<bool>>
                 },
             }
         }
+        println!("{phi}");
+        if phi.clauses.len() ==1{
+            println!("{:?}",phi.clauses[0]);
+        }
         if !added_unit_clause
         {
             //if no literal is forced to be true or false, choose one and backtrack
@@ -432,7 +436,7 @@ mod tests
         let mut bad_results = 0;
         for _ in 0..100
         {
-            let phi = Phi::from_file("TestData/test.cnf").unwrap();
+            let phi = Phi::from_file("TestData/solver20-0.cnf").unwrap();
             let result = super::solve(&phi);
             result.unwrap_or_else(||{bad_results+=1;vec![]});
         }
